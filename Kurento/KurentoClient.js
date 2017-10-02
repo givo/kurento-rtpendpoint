@@ -1,12 +1,13 @@
 var async = require('async');
 var kurento = require('kurento-client');
 
+KurentoClient.prototype.KClient = null;
+
 // TODO: implement a base class children will implement a rtsp2webRtc and webRtc2WebRtc and so on
 module.exports = class KurentoClient{
-    constructor(kurentoWsUrl, ws){
+    constructor(kurentoWsUrl, ws){        
         this.wsUrl = kurentoWsUrl;
-        this.ws = ws;
-        this.kClient = null;
+        this.ws = ws;        
 
         // dictionary for holding all current sessions (RtcPeer)
         this.sessions = {};
@@ -35,14 +36,14 @@ module.exports = class KurentoClient{
         async.waterfall([
             // create kurento client API instance
             (callback) => {
-                if(this.kClient != null){
+                if(KurentoClient.kClient != null){
                     kurento(kurentoWsUrl, function(error, _kurentoClient) {
                         if (error) {
                             console.log("Could not find media server at address " + argv.ws_uri);
                             return callback("Could not find media server at address" + argv.ws_uri + ". Exiting with error " + error);
                         }
                 
-                        this.kClient = _kurentoClient;
+                        KurentoClient.kClient = _kurentoClient;
                         callback(null);
                     });
                 }
@@ -52,7 +53,7 @@ module.exports = class KurentoClient{
             },
             // create a media pipeline
             (callback) => {
-                this.kClient.create('MediaPipeline', function(err, pipeline){
+                KurentoClient.kClient.create('MediaPipeline', function(err, pipeline){
                     if(err){
                         callback(err);
                     }
@@ -64,6 +65,7 @@ module.exports = class KurentoClient{
             (pipeline, callback) => {
                 pipeline.create('PlayerEndpoint', { url: 'rtsp://10.5.1.2' }, function(err, playerEndpoint){
                     if(err){
+                        pipeline.release();
                         callback(err);
                     }
 
@@ -74,6 +76,7 @@ module.exports = class KurentoClient{
             (pipeline, playerEndpoint, callback) => {
                 pipeline.create('WebRtcEndpoint', function(err, webRtcEndpoint){
                     if(err){
+                        pipeline.release();
                         callback(err);
                     }
 
@@ -84,16 +87,25 @@ module.exports = class KurentoClient{
             (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
                 playerEndpoint.connect(webRtcEndpoint, function(err){
                     if(err){
+                        pipeline.release();
                         callback(err);
                     }
 
-                    // when kurento gets his iceCandidate, send it to the client 
+                    // (parallel) when kurento gets his iceCandidate, send it to the client 
                     webRtcEndpoint.on('onIceCandidate', function(event){
                         let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
                         ws.send(JSON.stringify({
                             id: 'iceCandidate',
                             candidate: candidate
                         }));
+                    });
+
+                    // (parallel)
+                    webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
+                        if(err){
+                            pipeline.release();
+                            callback(err);
+                        }
                     });
 
                     callback(playerEndpoint);
