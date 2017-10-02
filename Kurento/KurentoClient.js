@@ -20,8 +20,8 @@ module.exports = class KurentoClient{
         let parsedCandidate = kurento.getComplexType('IceCandidate')(candidate);
 
         // if a complete pipeline has managed to be created
-        if(sessions[sessionId]){
-            sessions[sessionId].webRtcEndpoint.addIceCandidate(parsedCandidate);
+        if(this.sessions[sessionId]){
+            this.sessions[sessionId].webRtcEndpoint.addIceCandidate(parsedCandidate);
         }
         // else, queue the candidate
         else{
@@ -33,14 +33,15 @@ module.exports = class KurentoClient{
     }
 
     createPipeline(sdpOffer, cb){
+        let self = this;
+
         async.waterfall([
             // create kurento client API instance
             (callback) => {
                 if(KurentoClient.kClient != null){
                     kurento(kurentoWsUrl, function(error, _kurentoClient) {
-                        if (error) {
-                            console.log("Could not find media server at address " + argv.ws_uri);
-                            return callback("Could not find media server at address" + argv.ws_uri + ". Exiting with error " + error);
+                        if (error) {                            
+                            callback("Could not find media server at address" + argv.ws_uri + ". Exiting with error " + error);
                         }
                 
                         KurentoClient.kClient = _kurentoClient;
@@ -126,7 +127,7 @@ module.exports = class KurentoClient{
                         callback(err);
                     }
 
-                    sessions[sessionId] = {
+                    self.sessions[sessionId] = {
                         pipeline: pipeline,
                         webRtcEndpoint: webRtcEndpoint
                     }
@@ -141,5 +142,14 @@ module.exports = class KurentoClient{
 
             cb(null, sdpAnswer);
         });
+    }
+
+    destroyPipeline(sessionId){
+        if(this.sessions[sessionId]){
+            this.sessions[sessionId].pipeline.release();
+
+            delete sessions[sessionsId];
+            delete iceCandidateFIFO[sessionId];
+        }
     }
 }
