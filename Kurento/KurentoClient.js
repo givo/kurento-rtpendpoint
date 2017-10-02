@@ -80,7 +80,7 @@ module.exports = class KurentoClient{
                         callback(err);
                     }
 
-                    callback(pipeline, webRtcEndpoint);
+                    callback(pipeline, playerEndpoint, webRtcEndpoint);
                 });
             },
             // connect the PlayerEndpoint and WebRtcEndpoint
@@ -101,25 +101,36 @@ module.exports = class KurentoClient{
                     });
 
                     // (parallel)
-                    webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
+                    playerEndpoint.play(function (err){
                         if(err){
-                            pipeline.release();
                             callback(err);
                         }
                     });
 
-                    callback(playerEndpoint);
+                    callback(pipeline, playerEndpoint, webRtcEndpoint);
                 });
             }, 
-            (playerEndpoint, callback) => {
-                playerEndpoint.play(function (err){
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+                webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
                     if(err){
+                        pipeline.release();
                         callback(err);
                     }
+
+                    sessions[sessionId] = {
+                        pipeline: pipeline,
+                        webRtcEndpoint: webRtcEndpoint
+                    }
+
+                    callback(null, sdpAnswer);
                 });
             }
-        ], (err, res) => {
-            cb(err);
+        ], (err, sdpAnswer) => {
+            if(err){
+                cb(err);
+            }
+
+            cb(sdpAnswer);
         });
     }
 }
