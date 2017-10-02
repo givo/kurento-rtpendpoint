@@ -83,7 +83,7 @@ module.exports = class KurentoClient{
                     callback(pipeline, playerEndpoint, webRtcEndpoint);
                 });
             },
-            // connect the PlayerEndpoint and WebRtcEndpoint
+            // connect the PlayerEndpoint and WebRtcEndpoint and start media session pipeline
             (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
                 playerEndpoint.connect(webRtcEndpoint, function(err){
                     if(err){
@@ -100,6 +100,14 @@ module.exports = class KurentoClient{
                         }));
                     });
 
+                    // (parallel) order ice candidiates gather
+                    webRtcEndpoint.gatherCandidates(function(err) {
+                        if (err) {
+                            pipeline.release();
+                            callback(err);
+                        }
+                    });
+
                     // (parallel)
                     playerEndpoint.play(function (err){
                         if(err){
@@ -110,6 +118,7 @@ module.exports = class KurentoClient{
                     callback(pipeline, playerEndpoint, webRtcEndpoint);
                 });
             }, 
+            // handle sdp offer
             (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
                 webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
                     if(err){
@@ -130,7 +139,7 @@ module.exports = class KurentoClient{
                 cb(err);
             }
 
-            cb(sdpAnswer);
+            cb(null, sdpAnswer);
         });
     }
 }
