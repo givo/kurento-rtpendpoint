@@ -100,57 +100,65 @@ class KurentoClient{
 
                     console.log('successfully connected endpoints');
 
-                    // (parallel) when kurento gets his iceCandidate, send it to the client 
-                    webRtcEndpoint.on('OnIceCandidate', function(event){
-                        console.log('kurento generated ice candidate');
-
-                        let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-                        self.ws.send(JSON.stringify({
-                            id: 'iceCandidate',
-                            candidate: candidate
-                        }));
-                    });
-
-                    // (parallel)
-                    webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
-                        if(err){
-                            pipeline.release();
-                            callback(err);
-                        }
-    
-                        self.sessions[sessionId] = {
-                            pipeline: pipeline,
-                            webRtcEndpoint: webRtcEndpoint
-                        }
-    
-                        callback(null, sdpAnswer);
-                    });
-
-                    // (parallel) order ice candidiates gather
-                    webRtcEndpoint.gatherCandidates(function(err) {
-                        if (err) {
-                            console.error('error at create gatherCandidates');
-                            pipeline.release();
-                            callback(err);
-                        }
-                    });
-
-                    console.log('starting to receive rtsp broadcast');
-                    // (parallel)
-                    playerEndpoint.play(function (err){
-                        if(err){
-                            console.error('error at create play()');
-                            callback(err);
-                        }
-                    });
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                });
+            },
+            // start receiving rtsp
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+                console.log('starting to receive rtsp broadcast');
+                
+                playerEndpoint.play(function (err){
+                    if(err){
+                        console.error('error at create play()');
+                        callback(err);
+                    }
 
                     callback(null, pipeline, playerEndpoint, webRtcEndpoint);
                 });
-            } 
-            // handle sdp offer
-            // (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                
-            // }
+            },
+            // gather ice candidates
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+                // (parallel) when kurento gets his iceCandidate, send it to the client 
+                webRtcEndpoint.on('OnIceCandidate', function(event){
+                    console.log('kurento generated ice candidate');
+
+                    let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
+                    self.ws.send(JSON.stringify({
+                        id: 'iceCandidate',
+                        candidate: candidate
+                    }));
+                });
+
+                webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
+                    if(err){
+                        console.error('error at processOffer');
+                        pipeline.release();
+                        callback(err);
+                    }
+
+                    self.sessions[sessionId] = {
+                        pipeline: pipeline,
+                        webRtcEndpoint: webRtcEndpoint
+                    }
+
+                    console.log('successfullty processed sdp offer');
+
+                    callback(null, sdpAnswer);
+                });
+
+                // (parallel) order ice candidiates gather
+                webRtcEndpoint.gatherCandidates(function(err) {
+                    if (err) {
+                        console.error('error at create gatherCandidates');
+                        pipeline.release();
+                        callback(err);
+                    }
+
+                    console.log('successfullty started gathering ice candidates');
+
+                    //callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                });
+            }
         ], (err, sdpAnswer) => {
             if(err){
                 cb(err);
@@ -164,8 +172,8 @@ class KurentoClient{
         if(this.sessions[sessionId]){
             this.sessions[sessionId].pipeline.release();
 
-            delete sessions[sessionId];
-            delete iceCandidateFIFO[sessionId];
+            delete this.sessions[sessionId];
+            delete this.iceCandidateFIFO[sessionId];
         }
     }
 }
