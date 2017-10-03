@@ -1,10 +1,7 @@
 var async = require('async');
 var kurento = require('kurento-client');
 
-KurentoClient.prototype.KClient = null;
-
-// TODO: implement a base class children will implement a rtsp2webRtc and webRtc2WebRtc and so on
-module.exports = class KurentoClient{
+class KurentoClient{
     constructor(kurentoWsUrl, ws){        
         this.wsUrl = kurentoWsUrl;
         this.ws = ws;        
@@ -25,26 +22,28 @@ module.exports = class KurentoClient{
         }
         // else, queue the candidate
         else{
-            if (!iceCandidateFIFO[sessionId]) {
-                iceCandidateFIFO[sessionId] = [];
+            if (!this.iceCandidateFIFO[sessionId]) {
+                this.iceCandidateFIFO[sessionId] = [];
             }
-            iceCandidateFIFO[sessionId].push(parsedCandidate);
+            this.iceCandidateFIFO[sessionId].push(parsedCandidate);
         }
     }
 
-    createPipeline(sdpOffer, cb){
+    createPipeline(sessionId, sdpOffer, cb){
         let self = this;
 
         async.waterfall([
             // create kurento client API instance
-            (callback) => {
-                if(KurentoClient.kClient != null){
-                    kurento(kurentoWsUrl, function(error, _kurentoClient) {
-                        if (error) {                            
-                            callback("Could not find media server at address" + argv.ws_uri + ". Exiting with error " + error);
+            (callback) => {                
+                if(KurentoClient.KClient == null){
+                    kurento(this.wsUrl, function(err, _kurentoClient) {
+                        if (err) {     
+                            console.error('error at kurento()');
+                            callback("Could not find media server at address" + argv.ws_uri + ". Exiting with error " + err);
                         }
-                
-                        KurentoClient.kClient = _kurentoClient;
+                                                
+                        KurentoClient.KClient = _kurentoClient;
+                        console.log('successfully created kClient');
                         callback(null);
                     });
                 }
@@ -54,22 +53,26 @@ module.exports = class KurentoClient{
             },
             // create a media pipeline
             (callback) => {
-                KurentoClient.kClient.create('MediaPipeline', function(err, pipeline){
+                KurentoClient.KClient.create('MediaPipeline', function(err, pipeline){
                     if(err){
+                        console.error('error at create pipeline');
                         callback(err);
                     }
 
-                    callback(null. pipeline);
+                    console.log('successfully created pipeline');
+                    callback(null, pipeline);
                 });
             },
             // create a PlayerEndpoint in order to connect the media server to an rtsp input
             (pipeline, callback) => {
-                pipeline.create('PlayerEndpoint', { url: 'rtsp://10.5.1.2' }, function(err, playerEndpoint){
+                pipeline.create('PlayerEndpoint', { uri: 'rtsp://10.5.1.2' }, function(err, playerEndpoint){
                     if(err){
+                        console.error('error at create PlayerEndpoint');
                         pipeline.release();
                         callback(err);
                     }
 
+                    console.log('successfully created PlayerEndpoint');
                     callback(null, pipeline, playerEndpoint);
                 });
             },
@@ -77,64 +80,77 @@ module.exports = class KurentoClient{
             (pipeline, playerEndpoint, callback) => {
                 pipeline.create('WebRtcEndpoint', function(err, webRtcEndpoint){
                     if(err){
+                        console.error('error at create WebRtcEndpoing');
                         pipeline.release();
                         callback(err);
                     }
 
-                    callback(pipeline, playerEndpoint, webRtcEndpoint);
+                    console.log('successfully created WebRtcEndpoint');
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
                 });
             },
             // connect the PlayerEndpoint and WebRtcEndpoint and start media session pipeline
             (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
                 playerEndpoint.connect(webRtcEndpoint, function(err){
                     if(err){
+                        console.error('error at create connect');
                         pipeline.release();
                         callback(err);
                     }
 
+                    console.log('successfully connected endpoints');
+
                     // (parallel) when kurento gets his iceCandidate, send it to the client 
-                    webRtcEndpoint.on('onIceCandidate', function(event){
+                    webRtcEndpoint.on('OnIceCandidate', function(event){
+                        console.log('kurento generated ice candidate');
+
                         let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-                        ws.send(JSON.stringify({
+                        self.ws.send(JSON.stringify({
                             id: 'iceCandidate',
                             candidate: candidate
                         }));
                     });
 
+                    // (parallel)
+                    webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
+                        if(err){
+                            pipeline.release();
+                            callback(err);
+                        }
+    
+                        self.sessions[sessionId] = {
+                            pipeline: pipeline,
+                            webRtcEndpoint: webRtcEndpoint
+                        }
+    
+                        callback(null, sdpAnswer);
+                    });
+
                     // (parallel) order ice candidiates gather
                     webRtcEndpoint.gatherCandidates(function(err) {
                         if (err) {
+                            console.error('error at create gatherCandidates');
                             pipeline.release();
                             callback(err);
                         }
                     });
 
+                    console.log('starting to receive rtsp broadcast');
                     // (parallel)
                     playerEndpoint.play(function (err){
                         if(err){
+                            console.error('error at create play()');
                             callback(err);
                         }
                     });
 
-                    callback(pipeline, playerEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
                 });
-            }, 
+            } 
             // handle sdp offer
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
-                    if(err){
-                        pipeline.release();
-                        callback(err);
-                    }
-
-                    self.sessions[sessionId] = {
-                        pipeline: pipeline,
-                        webRtcEndpoint: webRtcEndpoint
-                    }
-
-                    callback(null, sdpAnswer);
-                });
-            }
+            // (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+                
+            // }
         ], (err, sdpAnswer) => {
             if(err){
                 cb(err);
@@ -148,8 +164,13 @@ module.exports = class KurentoClient{
         if(this.sessions[sessionId]){
             this.sessions[sessionId].pipeline.release();
 
-            delete sessions[sessionsId];
+            delete sessions[sessionId];
             delete iceCandidateFIFO[sessionId];
         }
     }
 }
+
+KurentoClient.KClient = null;
+
+// TODO: implement a base class children will implement a rtsp2webRtc and webRtc2WebRtc and so on
+module.exports = KurentoClient;
