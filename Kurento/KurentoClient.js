@@ -1,5 +1,18 @@
 var async = require('async');
 var kurento = require('kurento-client');
+var fs = require('fs');
+
+var encoderSdpRequest = null;
+
+fs.readFile(__dirname + '/stream.sdp', 'utf8', (err, data) => {
+    if(err){
+        throw err;
+    }
+
+    encoderSdpRequest = data;
+
+    console.log(encoderSdpRequest);
+});
 
 class KurentoClient{
     constructor(kurentoWsUrl, ws){        
@@ -63,21 +76,29 @@ class KurentoClient{
                     callback(null, pipeline);
                 });
             },
-            // create a PlayerEndpoint in order to connect the media server to an rtsp input
+            // create a RtpEndpoint in order to connect the media server to an rtsp input
             (pipeline, callback) => {
-                pipeline.create('PlayerEndpoint', { uri: 'rtsp://10.5.1.2' }, function(err, playerEndpoint){
+                pipeline.create('RtpEndpoint', (err, rtpEndpoint) => {
                     if(err){
-                        console.error('error at create PlayerEndpoint');
+                        console.error('error at create RtpEndpoint');
                         pipeline.release();
                         callback(err);
                     }
 
-                    console.log('successfully created PlayerEndpoint');
-                    callback(null, pipeline, playerEndpoint);
+                    rtpEndpoint.processOffer(encoderSdpRequest, function(err, sdpAnswer){
+                        if(err){
+                            console.error('error when processing encoder sdp offer');
+                            callback(err);
+                        }
+                        
+                        console.log('successfully created RtpEndpoint');
+                    
+                        callback(null, pipeline, rtpEndpoint);
+                    });
                 });
             },
             // create a WebRtcEndpoint in order to connect the media server to the client
-            (pipeline, playerEndpoint, callback) => {
+            (pipeline, rtpEndpoint, callback) => {
                 pipeline.create('WebRtcEndpoint', function(err, webRtcEndpoint){
                     if(err){
                         console.error('error at create WebRtcEndpoing');
@@ -86,12 +107,13 @@ class KurentoClient{
                     }
 
                     console.log('successfully created WebRtcEndpoint');
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             },
-            // connect the PlayerEndpoint and WebRtcEndpoint and start media session pipeline
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                playerEndpoint.connect(webRtcEndpoint, function(err){
+            // connect the RtpEndpoint and WebRtcEndpoint and start media session pipeline
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+                rtpEndpoint.connect(webRtcEndpoint, function(err){
                     if(err){
                         console.error('error at create connect');
                         pipeline.release();
@@ -100,35 +122,11 @@ class KurentoClient{
 
                     console.log('successfully connected endpoints');
 
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
-                });
-            },
-            // start receiving rtsp
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                console.log('starting to receive rtsp broadcast');
-                
-                playerEndpoint.play(function (err){
-                    if(err){
-                        console.error('error at create play()');
-                        callback(err);
-                    }
-
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             },
             // gather ice candidates
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                // (parallel) when kurento gets his iceCandidate, send it to the client 
-                webRtcEndpoint.on('OnIceCandidate', function(event){
-                    console.log('kurento generated ice candidate');
-
-                    let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-                    self.ws.send(JSON.stringify({
-                        id: 'iceCandidate',
-                        candidate: candidate
-                    }));
-                });
-
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
                 webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
                     if(err){
                         console.error('error at processOffer');
@@ -141,9 +139,21 @@ class KurentoClient{
                         webRtcEndpoint: webRtcEndpoint
                     }
 
-                    console.log('successfullty processed sdp offer');
+                    console.log('WebRtc successfullty processed sdp offer from client');
 
-                    callback(null, sdpAnswer);
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer);
+                });
+            },
+            (pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer callback) => {
+                // (parallel) when kurento gets his iceCandidate, send it to the client 
+                webRtcEndpoint.on('OnIceCandidate', function(event){
+                    console.log('kurento generated ice candidate');
+
+                    let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
+                    self.ws.send(JSON.stringify({
+                        id: 'iceCandidate',
+                        candidate: candidate
+                    }));
                 });
 
                 // (parallel) order ice candidiates gather
@@ -156,7 +166,7 @@ class KurentoClient{
 
                     console.log('successfullty started gathering ice candidates');
 
-                    //callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                    callback(null);
                 });
             }
         ], (err, sdpAnswer) => {
