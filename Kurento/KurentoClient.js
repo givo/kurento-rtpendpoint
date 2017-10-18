@@ -10,8 +10,6 @@ fs.readFile(__dirname + '/stream.sdp', 'utf8', (err, data) => {
     }
 
     encoderSdpRequest = data;
-
-    console.log(encoderSdpRequest);
 });
 
 class KurentoClient{
@@ -44,10 +42,10 @@ class KurentoClient{
 
     createPipeline(sessionId, sdpOffer, cb){
         let self = this;
-
+        
         async.waterfall([
             // create kurento client API instance
-            (callback) => {                
+            (callback) => {                                
                 if(KurentoClient.KClient == null){
                     kurento(this.wsUrl, function(err, _kurentoClient) {
                         if (err) {     
@@ -61,7 +59,7 @@ class KurentoClient{
                     });
                 }
                 else{
-                    callback();
+                    callback(null);
                 }
             },
             // create a media pipeline
@@ -125,7 +123,7 @@ class KurentoClient{
                     callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             },
-            // gather ice candidates
+            // process sdp offer from client
             (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
                 webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
                     if(err){
@@ -144,7 +142,8 @@ class KurentoClient{
                     callback(null, pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer);
                 });
             },
-            (pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer callback) => {
+            // gather ice candidates
+            (pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer, callback) => {
                 // (parallel) when kurento gets his iceCandidate, send it to the client 
                 webRtcEndpoint.on('OnIceCandidate', function(event){
                     console.log('kurento generated ice candidate');
@@ -166,7 +165,7 @@ class KurentoClient{
 
                     console.log('successfullty started gathering ice candidates');
 
-                    callback(null);
+                    callback(null, sdpAnswer);
                 });
             }
         ], (err, sdpAnswer) => {
