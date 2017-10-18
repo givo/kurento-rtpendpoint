@@ -29,10 +29,12 @@ class KurentoClient{
 
         // if a complete pipeline has managed to be created
         if(this.sessions[sessionId]){
+            console.log('added ice');
             this.sessions[sessionId].webRtcEndpoint.addIceCandidate(parsedCandidate);
         }
         // else, queue the candidate
         else{
+            console.log('queue');
             if (!this.iceCandidateFIFO[sessionId]) {
                 this.iceCandidateFIFO[sessionId] = [];
             }
@@ -71,23 +73,26 @@ class KurentoClient{
                     }
 
                     console.log('successfully created pipeline');
+                    
                     callback(null, pipeline);
                 });
             },
-            // create a RtpEndpoint in order to connect the media server to an rtsp input
+            // create a PlayerEndpoint in order to connect the media server to an rtsp input
             (pipeline, callback) => {
-                pipeline.create('RtpEndpoint', (err, rtpEndpoint) => {
+                pipeline.create('PlayerEndpoint', {uri: 'http://192.168.6.6:3000/stream.sdp' }, (err, playerEndpoint) => {
                     if(err){
-                        console.error('error at create RtpEndpoint');
+                        console.error('error at create PlayerEndpoint');
                         pipeline.release();
                         callback(err);
                     }
 
-                    callback(null, pipeline, rtpEndpoint);
+                    console.log('successfully create PlayerEndpoint');
+
+                    callback(null, pipeline, playerEndpoint);
                 });
             },
             // create a WebRtcEndpoint in order to connect the media server to the client
-            (pipeline, rtpEndpoint, callback) => {
+            (pipeline, playerEndpoint, callback) => {
                 pipeline.create('WebRtcEndpoint', function(err, webRtcEndpoint){
                     if(err){
                         console.error('error at create WebRtcEndpoing');
@@ -97,25 +102,18 @@ class KurentoClient{
 
                     console.log('successfully created WebRtcEndpoint');
 
-                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
-                });
-            },
-            // connect the RtpEndpoint and WebRtcEndpoint and start media session pipeline
-            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
-                rtpEndpoint.connect(webRtcEndpoint, function(err){
-                    if(err){
-                        console.error('error at create connect');
-                        pipeline.release();
-                        callback(err);
+                    if(self.iceCandidateFIFO[sessionId]){
+                        console.log('ice was waiting in the queue');
+
+                        var candidate = self.iceCandidateFIFO[sessionId].shift();
+                        webRtcEndpoint.addIceCandidate(candidate);
                     }
 
-                    console.log('successfully connected endpoints');
-
-                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
                 });
             },
             // process sdp offer from client
-            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
                 webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
                     if(err){
                         console.error('error at processOffer');
@@ -132,11 +130,11 @@ class KurentoClient{
 
                     cb(null, sdpAnswer);
 
-                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
                 });
             },
             // gather ice candidates
-            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
                 // (parallel) when kurento gets his iceCandidate, send it to the client 
                 webRtcEndpoint.on('OnIceCandidate', function(event){
                     console.log('kurento generated ice candidate');
@@ -158,28 +156,41 @@ class KurentoClient{
 
                     console.log('successfullty started gathering ice candidates');
 
-                    callback(null,pipeline, rtpEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
                 });
             },
-            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
-                console.log('processing encoder sdp');
-
-                rtpEndpoint.processOffer(encoderSdpRequest, function(err, sdpAnswer){
+            // connect the PlayerEndpoint and WebRtcEndpoint and start media session pipeline
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+                playerEndpoint.connect(webRtcEndpoint, function(err){
                     if(err){
-                        console.error('error when processing encoder sdp offer');
+                        console.error('error at create connect');
+                        pipeline.release();
                         callback(err);
                     }
-                    
-                    console.log('successfully processed encoder sdp');
-                
-                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
+
+                    console.log('successfully connected endpoints');
+
+                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                });
+            },
+            // Play
+            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+                playerEndpoint.play(function(err){
+                    if(err){
+                        callback(err);
+                    }
+
+                    console.log('playing');
+
+                    callback(null);
                 });
             }
         ], (err, result) => {
             if(err){
                 cb(err);
             }
-            
+            console.log('finish');
+            //cb(null, null);
         });
     }
 
