@@ -83,16 +83,7 @@ class KurentoClient{
                         callback(err);
                     }
 
-                    rtpEndpoint.processOffer(encoderSdpRequest, function(err, sdpAnswer){
-                        if(err){
-                            console.error('error when processing encoder sdp offer');
-                            callback(err);
-                        }
-                        
-                        console.log('successfully created RtpEndpoint');
-                    
-                        callback(null, pipeline, rtpEndpoint);
-                    });
+                    callback(null, pipeline, rtpEndpoint);
                 });
             },
             // create a WebRtcEndpoint in order to connect the media server to the client
@@ -139,11 +130,13 @@ class KurentoClient{
 
                     console.log('WebRtc successfullty processed sdp offer from client');
 
-                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer);
+                    cb(null, sdpAnswer);
+
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             },
             // gather ice candidates
-            (pipeline, rtpEndpoint, webRtcEndpoint, sdpAnswer, callback) => {
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
                 // (parallel) when kurento gets his iceCandidate, send it to the client 
                 webRtcEndpoint.on('OnIceCandidate', function(event){
                     console.log('kurento generated ice candidate');
@@ -165,15 +158,28 @@ class KurentoClient{
 
                     console.log('successfullty started gathering ice candidates');
 
-                    callback(null, sdpAnswer);
+                    callback(null,pipeline, rtpEndpoint, webRtcEndpoint);
+                });
+            },
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+                console.log('processing encoder sdp');
+
+                rtpEndpoint.processOffer(encoderSdpRequest, function(err, sdpAnswer){
+                    if(err){
+                        console.error('error when processing encoder sdp offer');
+                        callback(err);
+                    }
+                    
+                    console.log('successfully processed encoder sdp');
+                
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             }
-        ], (err, sdpAnswer) => {
+        ], (err, result) => {
             if(err){
                 cb(err);
             }
-
-            cb(null, sdpAnswer);
+            
         });
     }
 
