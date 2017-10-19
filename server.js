@@ -1,9 +1,10 @@
 var express = require('express');
 var session = require('express-session')
-var WebSocket = require('ws');
+var ws = require('ws');
 var KurentoClient = require('./Kurento/KurentoClient');
+var fs = require('fs');
 
-const KURENTO_WS_URL = 'ws://10.5.1.5:8888/kurento';
+const KURENTO_WS_URL = 'ws://192.168.6.20:8888/kurento';
 
 //
 // Express
@@ -19,19 +20,21 @@ var sessionHandler = session({
 
 app.use(sessionHandler);
 
-app.listen(3000, function(){
-    console.log('listening on port 3000..');
-});
-
 //
 // Static
 //
-app.use(express.static(__dirname + '/client'));
+app.use(express.static('C:/projects/kurento-test/client'));
+
+app.listen(3000, function(){
+    console.log('listenning at 3000');
+});
 
 //
 // Web Socket
 // 
-var wss = WebSocket.Server({ port: 8080 });  
+var wss = ws.Server({
+     port: 8080,     
+});  
 
 wss.on('connection', function connect(newSocket, req){
     //let sessionId = newSocket.upgradeReq.session.id;
@@ -84,10 +87,16 @@ wss.on('connection', function connect(newSocket, req){
                         });
                     }
                     else{
-                        response = JSON.stringify({
-                           id: 'sdpAnswer',
-                           sdpAnswer: sdpAnswer
-                        });
+                        if(parsedMsg.sdpOffer != null){
+                            response = JSON.stringify({
+                                id: 'sdpAnswer',
+                                sdpAnswer: sdpAnswer
+                            });
+                        }
+                        else {       
+                            console.log('f');
+                            response = JSON.stringify({});
+                        }
                     }
 
                     return newSocket.send(response);
@@ -99,7 +108,7 @@ wss.on('connection', function connect(newSocket, req){
             break;
 
             case 'iceCandidate':
-                console.log('received "start" message');
+                console.log('received ice candidate');
 
                 kClient.addClientIceCandidate(sessionId, parsedMsg.candidate);
                 break;
