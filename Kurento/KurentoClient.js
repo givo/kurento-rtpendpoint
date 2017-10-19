@@ -79,7 +79,7 @@ class KurentoClient{
             },
             // create a PlayerEndpoint in order to connect the media server to an rtsp input
             (pipeline, callback) => {
-                pipeline.create('PlayerEndpoint', {uri: 'http://192.168.6.6:3000/stream.sdp' }, (err, playerEndpoint) => {
+                pipeline.create('PlayerEndpoint', {uri: 'rtsp://192.168.6.6:8554/v.sdp' }, (err, playerEndpoint) => {
                     if(err){
                         console.error('error at create PlayerEndpoint');
                         pipeline.release();
