@@ -16,8 +16,7 @@ ws.onopen = function(event){
     console.log('socket opened');
 }
 
-ws.onmessage = function(msg) {
-    console.log(msg);
+ws.onmessage = function(msg) {    
     var parsedMsg = JSON.parse(msg.data);
 
     switch (parsedMsg.id){
@@ -32,12 +31,15 @@ ws.onmessage = function(msg) {
                 if(err){
                     console.error('ERROR: ' + err);
                 }
-            });
+            }); 
         break;
 
         case 'sdpAnswer':
             console.log('SDP answer received, processing..');
-            webRtcPeer.processAnswer(parsedMsg.sdpAnswer);
+
+            console.log(parsedMsg.sdpAnswer);
+
+            webRtcPeer.setRemoteDescription(new RTCSessionDescription(parsedMsg.sdpAnswer));
         break;
 
         default:
@@ -63,14 +65,17 @@ function onLocalOfferCreated(err, sdpOffer){
         console.error(err);
     }
 
+    console.log('local sdp: \n' + sdpOffer.sdp);
+
+    webRtcPeer.setLocalDescription(sdpOffer);
+
     var message = {
         id: 'start',
-        sdpOffer: sdpOffer
+        sdpOffer: sdpOffer.sdp
     }
 
-    ws.send(JSON.stringify(message));
-
     console.log('sending local sdp offer');
+    ws.send(JSON.stringify(message));
 }
 
 function btnStart(){
@@ -79,17 +84,16 @@ function btnStart(){
     //
     // Create the webRtcPeer instance
     // 
-    var webRtcOptions = {
-        mediaConstraints: { audio: false },        
-        remoteVideo: remoteVideo,
-        onicecandidate: onIceCandidate
-    };
+    webRtcPeer = new RTCPeerConnection();
 
-    webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(webRtcOptions, function(err){
-        if(err){
-            console.error(err);
-        }
+    webRtcPeer.onicecandidate = onIceCandidate;
+    webRtcPeer.onopen = () => console.log('real time connection has established');
+    webRtcPeer.onerror = (err) => console.log(`real time connection error {err}`);
+    webRtcPeer.onaddstream = (event) => remoteVideo.src = window.URL.createObjectURL(event.stream);
 
-        this.generateOffer(onLocalOfferCreated);
+    webRtcPeer.createOffer((offer) => {
+        onLocalOfferCreated(null, offer);
+    }, (err) => {
+        onLocalOfferCreated(err, null);
     });
 }
