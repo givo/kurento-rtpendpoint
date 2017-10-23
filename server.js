@@ -23,7 +23,7 @@ app.use(sessionHandler);
 //
 // Static
 //
-app.use(express.static('C:/projects/kurento-test/client'));
+app.use(express.static('client'));
 
 app.listen(3000, function(){
     console.log('listenning at 3000');
