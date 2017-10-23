@@ -1,9 +1,15 @@
-var remoteVideo = document.getElementById('remoteVideo');
+var remoteVideo;
+var remoteVideo2;
+var remoteVideo3;
+var remoteVideo4;
 var webRtcPeer;
 
 window.onload = function() {	
 	console.log('Page loaded ...');	
-	remoteVideo = document.getElementById('remoteVideo');	
+    remoteVideo = document.getElementById('remoteVideo');	
+    remoteVideo2 = document.getElementById('remoteVideo2');	
+    remoteVideo3 = document.getElementById('remoteVideo3');	
+    remoteVideo4 = document.getElementById('remoteVideo4');	
 }
 
 var ws = new WebSocket('ws://localhost:8080');
@@ -37,9 +43,9 @@ ws.onmessage = function(msg) {
         case 'sdpAnswer':
             console.log('SDP answer received, processing..');
 
-            console.log(parsedMsg.sdpAnswer);
+            //console.log(parsedMsg.sdpAnswer);
 
-            webRtcPeer.setRemoteDescription(new RTCSessionDescription(parsedMsg.sdpAnswer));
+            webRtcPeer.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: parsedMsg.sdpAnswer }));
         break;
 
         default:
@@ -48,12 +54,12 @@ ws.onmessage = function(msg) {
     }
 }
 
-function onIceCandidate(candidate){
-    console.log(`local candidate: ${JSON.stringify(candidate)}`);
+function onIceCandidate(event){
+    console.log(`local candidate: ${JSON.stringify(event.candidate)}`);
 
     var message = {
         id: 'iceCandidate',
-        candidate: candidate
+        candidate: event.candidate
     }
 
     ws.send(JSON.stringify(message));
@@ -65,7 +71,7 @@ function onLocalOfferCreated(err, sdpOffer){
         console.error(err);
     }
 
-    console.log('local sdp: \n' + sdpOffer.sdp);
+    //console.log('local sdp: \n' + sdpOffer.sdp);
 
     webRtcPeer.setLocalDescription(sdpOffer);
 
@@ -88,12 +94,13 @@ function btnStart(){
 
     webRtcPeer.onicecandidate = onIceCandidate;
     webRtcPeer.onopen = () => console.log('real time connection has established');
-    webRtcPeer.onerror = (err) => console.log(`real time connection error {err}`);
-    webRtcPeer.onaddstream = (event) => remoteVideo.src = window.URL.createObjectURL(event.stream);
+    webRtcPeer.onerror = (err) => console.log(`real time connection error ${err}`);
+    webRtcPeer.onaddstream = (event) => {       
+        remoteVideo.src = window.URL.createObjectURL(event.stream);
+        remoteVideo2.src = window.URL.createObjectURL(event.stream);
+        remoteVideo3.src = window.URL.createObjectURL(event.stream);
+        remoteVideo4.src = window.URL.createObjectURL(event.stream);
+    }
 
-    webRtcPeer.createOffer((offer) => {
-        onLocalOfferCreated(null, offer);
-    }, (err) => {
-        onLocalOfferCreated(err, null);
-    });
+    webRtcPeer.createOffer((offer) => onLocalOfferCreated(null, offer), (err) => onLocalOfferCreated(err, null), { offerToReceiveAudio: 0, offerToReceiveVideo: 1 });
 }
