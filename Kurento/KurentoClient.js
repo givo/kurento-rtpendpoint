@@ -126,8 +126,7 @@ class KurentoClient{
                         webRtcEndpoint: webRtcEndpoint
                     }
 
-                    console.log('successfullty processed sdp offer from client');
-                    console.log(sdpAnswer);
+                    console.log('successfullty processed sdp offer from client');                    
 
                     cb(null, sdpAnswer);
 
