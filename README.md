@@ -1,21 +1,22 @@
-# PlayerEndpoint Example
+# Rtp Endpoint Example
 
 ## Introduction
 
-The PlayerEndpoint example 
+This is a `Node.js` example which creates a `RtpEndpoint` to `WebRtcEndpoint` pipeline in `Kurento` media server. 
 
-This is a `Node.js` example which creates a `PlayerEndpoint` to `WebRtcEndpoint` pipeline in `Kurento` media server. 
+In this example a we used `Haivision Makito` to capture a monitor and watching the live stream on a simple web page.
 
-In this example a `RTSP-H.264` stream generates by `VLC` is transmitted to `Kureto` (which is deployed on Ubuntu 14.04 virtual machine) which trancodes to `VP8` and transmitted
-to a simple web page in WebRTC.
+We successfuly connected `Kurento` to Maktio using `Direct RTP` and `QuickTime`.
 
-## VLC
+`Kureto` is deployed on Ubuntu 14.04 virtual machine
 
-stream desktop using:
+## Improtant Note
 
-      :sout=#transcode{vcodec=h264,scale=Auto,width=1920,height=1080,acodec=mpga,ab=128,channels=2,samplerate=44100}:rtp{sdp=rtsp://:8554/v.sdp} :sout-keep
-      
-**Watch Out!** - using ` :file-caching` lower than 1000ms causes image smearing and key-frame lose.
+In order for this example to work you need to reconfigure in runtime (just after receiving the sdp answer) to use the udp port which `kurento` accepts in the sdp answer.
+
+## Haivision Makito
+
+![directRtp](/uploads/d5dca4a1d08e2fcc6ddac1150f18f34c/directRtp.png)
 
 ## Required Node.js Packages:
 
