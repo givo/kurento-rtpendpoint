@@ -12,10 +12,10 @@ window.onload = function() {
     remoteVideo4 = document.getElementById('remoteVideo4');	
 }
 
-var ws = new WebSocket('ws://localhost:8080');
+var ws = new WebSocket('ws://192.168.6.6:8080');
 
 window.onbeforeunload = function() {
-	ws.close();
+    ws.close();
 }
 
 ws.onopen = function(event){
@@ -54,8 +54,14 @@ ws.onmessage = function(msg) {
     }
 }
 
+// when a local ice candidate is generated
 function onIceCandidate(event){
     console.log(`local candidate: ${JSON.stringify(event.candidate)}`);
+
+    if (event.candidate == null) {
+        console.log('null candidate');
+        return;
+    }
 
     var message = {
         id: 'iceCandidate',
