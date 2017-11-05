@@ -4,6 +4,9 @@ var fs = require('fs');
 
 var encoderSdpRequest = null;
 
+// 
+// Read encoder sdp from file system
+//
 fs.readFile(__dirname + '/stream.sdp', 'utf8', (err, data) => {
     if(err){
         throw err;
@@ -24,13 +27,19 @@ class KurentoClient{
     }
 
     // when received an ice candidate from client
-    addClientIceCandidate(sessionId, candidate){
+    addClientIceCandidate(sessionId, candidate) {
         let parsedCandidate = kurento.getComplexType('IceCandidate')(candidate);
 
         // if a complete pipeline has managed to be created
-        if(this.sessions[sessionId]){
-            console.log('added ice');
-            this.sessions[sessionId].webRtcEndpoint.addIceCandidate(parsedCandidate);
+        if (this.sessions[sessionId]) {
+            this.sessions[sessionId].webRtcEndpoint.addIceCandidate(parsedCandidate, (err) => {
+                if (err) {
+                    console.error(`addClientIceCandidate() ${err}`);
+                    return;
+                }
+
+                console.log('addClientIceCandidate() added ice');
+            });
         }
         // else, queue the candidate
         else{
@@ -46,7 +55,9 @@ class KurentoClient{
         let self = this;
         
         async.waterfall([
+            //
             // create kurento client API instance
+            //
             (callback) => {                                
                 if(KurentoClient.KClient == null){
                     kurento(this.wsUrl, function(err, _kurentoClient) {
@@ -56,7 +67,9 @@ class KurentoClient{
                         }
                                                 
                         KurentoClient.KClient = _kurentoClient;
+
                         console.log('successfully created kClient');
+
                         callback(null);
                     });
                 }
@@ -64,7 +77,9 @@ class KurentoClient{
                     callback(null);
                 }
             },
+            //
             // create a media pipeline
+            //
             (callback) => {
                 KurentoClient.KClient.create('MediaPipeline', function(err, pipeline){
                     if(err){
@@ -77,43 +92,98 @@ class KurentoClient{
                     callback(null, pipeline);
                 });
             },
-            // create a PlayerEndpoint in order to connect the media server to an rtsp input
+            //
+            // create a WebRtcEndpoint 
+            //
             (pipeline, callback) => {
-                pipeline.create('PlayerEndpoint', {uri: 'rtsp://192.168.6.6:8554/v.sdp', networkCache: 0 }, (err, playerEndpoint) => {
-                    if(err){
-                        console.error('error at create PlayerEndpoint');
-                        pipeline.release();
-                        callback(err);
-                    }
-
-                    console.log('successfully create PlayerEndpoint');
-
-                    callback(null, pipeline, playerEndpoint);
-                });
-            },
-            // create a WebRtcEndpoint in order to connect the media server to the client
-            (pipeline, playerEndpoint, callback) => {
-                pipeline.create('WebRtcEndpoint', function(err, webRtcEndpoint){
-                    if(err){
+                pipeline.create('WebRtcEndpoint', function (err, webRtcEndpoint) {
+                    if (err) {
                         console.error('error at create WebRtcEndpoing');
                         pipeline.release();
                         callback(err);
                     }
+                    
+                    //
+                    // listenning to media flow states
+                    //
+                    webRtcEndpoint.on('MediaFlowInStateChange', function(event){
+                        console.log('WebRtc flow IN:\n');
+                        console.log(event);
+                    });
+                    webRtcEndpoint.on('MediaFlowOutStateChange', function(event){
+                        console.log('WebRtc flow OUT:\n');
+                        console.log(event);
+                    });
 
                     console.log('successfully created WebRtcEndpoint');
 
-                    if(self.iceCandidateFIFO[sessionId]){
-                        console.log('ice was waiting in the queue');
-
-                        var candidate = self.iceCandidateFIFO[sessionId].shift();
-                        webRtcEndpoint.addIceCandidate(candidate);
+                    // create session
+                    self.sessions[sessionId] = {
+                        pipeline: pipeline,
+                        webRtcEndpoint: webRtcEndpoint
                     }
 
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, webRtcEndpoint);
                 });
             },
-            // process sdp offer from client
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
+            //
+            // create a rtpEndpoint 
+            //
+            (pipeline, webRtcEndpoint, callback) => {
+                pipeline.create('RtpEndpoint', (err, rtpEndpoint) => {
+                    if(err){
+                        console.error('error at create rtpEndpoint');
+                        pipeline.release();
+                        callback(err);
+                    }
+
+                    //
+                    // listenning to media flow states
+                    //
+                    rtpEndpoint.on('MediaFlowInStateChange', function(event){
+                        console.log('Rtp flow IN:\n');
+                        console.log(event);
+                    });
+                    rtpEndpoint.on('MediaFlowOutStateChange', function(event){
+                        console.log('Rtp flow OUT:\n');
+                        console.log(event);
+                    });
+
+                    console.log('successfully create rtpEndpoint');
+
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
+                });
+            },
+            //
+            // process encoder sdp
+            //
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+                rtpEndpoint.setMaxVideoRecvBandwidth(1000);
+
+                rtpEndpoint.processOffer(encoderSdpRequest, (err, sdpAnswer) => {
+                    if (err) {
+                        console.error(err);
+                        pipeline.release();
+                        callback(err);
+                    }
+
+                    console.log(`successfully process sdp from encoder \n\n${sdpAnswer}`);
+
+                    rtpEndpoint.getConnectionState(function encoderStateChanged(err, state) {
+                        if (err) {
+                            console.error(err);
+                        }
+
+                        console.log(`encoder connection state: ${state}`);
+                    });
+
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
+                });
+            },                
+            //
+            // process client sdp offer 
+            //
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
                 webRtcEndpoint.processOffer(sdpOffer, function(err, sdpAnswer){
                     if(err){
                         console.error('error at processOffer');
@@ -121,32 +191,72 @@ class KurentoClient{
                         callback(err);
                     }
 
-                    self.sessions[sessionId] = {
-                        pipeline: pipeline,
-                        webRtcEndpoint: webRtcEndpoint
-                    }
-
                     console.log('successfullty processed sdp offer from client');                    
 
                     cb(null, sdpAnswer);
 
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             },
+            //
+            // get waiting candidates from FIFO
+            //
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {   
+                
+                console.log(`fifo ${self.iceCandidateFIFO[sessionId].length}`);
+
+                async.retry((iceCallback) => {
+                    if (self.iceCandidateFIFO[sessionId].length) {
+                        // pull candidate from queue
+                        var candidate = self.iceCandidateFIFO[sessionId].shift();
+
+                        // add ice to webrtc endpoint
+                        webRtcEndpoint.addIceCandidate(candidate, (candidateErr) => {
+                            if (candidateErr) {
+                                // break loop
+                                console.error(`ERROR while getting waiting candidiates! ${candidateErr}`);
+                                iceCallback(candidateErr);
+                            }
+
+                            console.log('added waiting ice');
+
+                            // continute
+                            iceCallback({}, null);
+                        });
+                    }
+                    else {
+                        // finish iteration
+                        console.log('finish iteration');
+
+                        iceCallback(null, {});
+                    }
+                }, (candidateErr, res) => {
+                    if (candidateErr) {
+                        callback(candidateErr);
+                    }
+
+                    console.log(`finish loop ${res}`);
+
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
+                });
+            },  
+            //
             // gather ice candidates
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                // (parallel) when kurento gets his iceCandidate, send it to the client 
+            //
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+                // when kurento gets his iceCandidate, send it to the client 
                 webRtcEndpoint.on('OnIceCandidate', function(event){
                     console.log('kurento generated ice candidate');
 
                     let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
+                    
                     self.ws.send(JSON.stringify({
                         id: 'iceCandidate',
                         candidate: candidate
                     }));
                 });
 
-                // (parallel) order ice candidiates gather
+                // order ice candidiates gather
                 webRtcEndpoint.gatherCandidates(function(err) {
                     if (err) {
                         console.error('error at create gatherCandidates');
@@ -154,15 +264,17 @@ class KurentoClient{
                         callback(err);
                     }
 
-                    console.log('successfullty started gathering ice candidates');
+                    console.log('started gathering ice candidates');
 
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
-            },
-            // connect the PlayerEndpoint and WebRtcEndpoint and start media session pipeline
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                playerEndpoint.connect(webRtcEndpoint, function(err){
-                    if(err){
+            }, 
+            //
+            // connect the rtpEndpoint and WebRtcEndpoint and start media session pipeline
+            //
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+                rtpEndpoint.connect(webRtcEndpoint, function (err) {
+                    if (err) {
                         console.error('error at create connect');
                         pipeline.release();
                         callback(err);
@@ -170,19 +282,7 @@ class KurentoClient{
 
                     console.log('successfully connected endpoints');
 
-                    callback(null, pipeline, playerEndpoint, webRtcEndpoint);
-                });
-            },
-            // Play
-            (pipeline, playerEndpoint, webRtcEndpoint, callback) => {
-                playerEndpoint.play(function(err){
-                    if(err){
-                        callback(err);
-                    }
-
-                    console.log('playing');
-
-                    callback(null);
+                    callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
                 });
             }
         ], (err, result) => {
