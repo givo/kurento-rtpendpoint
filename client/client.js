@@ -54,7 +54,9 @@ ws.onmessage = function(msg) {
     }
 }
 
+//
 // when a local ice candidate is generated
+//
 function onIceCandidate(event){
     console.log(`local candidate: ${JSON.stringify(event.candidate)}`);
 
@@ -71,13 +73,20 @@ function onIceCandidate(event){
     ws.send(JSON.stringify(message));
 }
 
+//
 // when a sdp offset is created, send the offer to the server
+//
 function onLocalOfferCreated(err, sdpOffer){
     if(err){
         console.error(err);
-    }
+    }    
 
-    //console.log('local sdp: \n' + sdpOffer.sdp);
+    //
+    // remove all other rtp profiles and request only h264 
+    //
+    let split = sdpOffer.sdp.split('a=rtpmap:96 VP8/90000');
+    var h264Sdp = split[0] + "a=rtpmap:96 H264/90000\n";
+    sdpOffer.sdp = h264Sdp;
 
     webRtcPeer.setLocalDescription(sdpOffer);
 
@@ -90,6 +99,9 @@ function onLocalOfferCreated(err, sdpOffer){
     ws.send(JSON.stringify(message));
 }
 
+//
+// On start button click
+//
 function btnStart(){
     console.log('Creating WebRtcPeer and generating local sdp offer ...');
 
