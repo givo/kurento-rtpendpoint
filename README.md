@@ -16,6 +16,13 @@ We successfuly connected `Kurento` to Maktio using `Direct RTP` and `QuickTime`.
 
 * Your `Ubuntu` machine which runs `Kurento` have to have `openh264` and package from Cisco installed.
 
+## Codec Transcoding
+
+By default `Kurento` use VP8 as the `WebRtc` codec, that's why Kurento will transcode any `h.264` stream before sinking to a WebRtcEndpoint.
+
+* In order to disable transcoding to VP8 at Kurento, request a h264 rtp profile in client side by editing the local sdp.
+* You can implement that by removing all `rtpmap` lines which are different then 96 and leave only `a=rtpmap:96 H264/90000` line.
+
 ### 'openh265' offline installation instructions:
 
  * Copy `libopenh264-1.4.0-linux64.so.bz2` (or newer) to the root `/` directory and add permissions (`chmod 777`)
