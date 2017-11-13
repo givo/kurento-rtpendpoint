@@ -12,13 +12,15 @@ We successfuly connected [Kurento](4) to Maktio using `Direct RTP` and `QuickTim
 
 ## Improtant Notes
 
+* Learn [SDP](7)! (or at least learn the basics)
+
 * Your `Ubuntu` machine which runs [Kurento](4) have to have [openh264](5) and package from Cisco installed.
 
 * If your rtp source doesn't support sdp negogiation, you will need to manually configure it transmits to the udp port described in kurento sdp answer.
 
 ## Codec Transcoding
 
-By default [Kurento](4) use `VP8` as its' [WebRtc](6) codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2).
+By default [Kurento](4) uses `VP8` as its' [WebRtc](6) codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2).
 
 In order to disable transcoding to VP8 at Kurento, request a h264 rtp profile in client side by editing the local sdp.
 
@@ -52,3 +54,4 @@ sudo apt-get install openh264-gst-plugins-bad-1.5
 [4]: https://www.kurento.org/whats-kurento
 [5]: https://github.com/cisco/openh264
 [6]: https://webrtc.org/
+[7]: https://tools.ietf.org/html/rfc4566
