@@ -30,7 +30,7 @@ class KurentoClient{
     addClientIceCandidate(sessionId, candidate) {
         let parsedCandidate = kurento.getComplexType('IceCandidate')(candidate);
 
-        // if a complete pipeline has managed to be created
+        // if a WebRtcEndpoint has been created for this session
         if (this.sessions[sessionId]) {
             this.sessions[sessionId].webRtcEndpoint.addIceCandidate(parsedCandidate, (err) => {
                 if (err) {
@@ -78,7 +78,7 @@ class KurentoClient{
                 }
             },
             //
-            // create a media pipeline
+            // create MediaPipeline
             //
             (callback) => {
                 KurentoClient.KClient.create('MediaPipeline', function(err, pipeline){
@@ -93,7 +93,7 @@ class KurentoClient{
                 });
             },
             //
-            // create a WebRtcEndpoint 
+            // create WebRtcEndpoint 
             //
             (pipeline, callback) => {
                 pipeline.create('WebRtcEndpoint', function (err, webRtcEndpoint) {
@@ -107,12 +107,10 @@ class KurentoClient{
                     // listenning to media flow states
                     //
                     webRtcEndpoint.on('MediaFlowInStateChange', function(event){
-                        console.log('WebRtc flow IN:\n');
-                        console.log(event);
+                        console.log(`WebRtc flow IN: ${event.state}\n`);                        
                     });
                     webRtcEndpoint.on('MediaFlowOutStateChange', function(event){
-                        console.log('WebRtc flow OUT:\n');
-                        console.log(event);
+                        console.log(`WebRtc flow OUT: ${event.state}\n`);                        
                     });
 
                     console.log('successfully created WebRtcEndpoint');
@@ -141,12 +139,10 @@ class KurentoClient{
                     // listenning to media flow states
                     //
                     rtpEndpoint.on('MediaFlowInStateChange', function(event){
-                        console.log('Rtp flow IN:\n');
-                        console.log(event);
+                        console.log(`Rtp flow IN: ${event.state}\n`);                        
                     });
                     rtpEndpoint.on('MediaFlowOutStateChange', function(event){
-                        console.log('Rtp flow OUT:\n');
-                        console.log(event);
+                        console.log(`Rtp flow OUT: ${event.state}\n`);                        
                     });
 
                     console.log('successfully create rtpEndpoint');
@@ -157,7 +153,8 @@ class KurentoClient{
             //
             // process encoder sdp
             //
-            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {
+            (pipeline, rtpEndpoint, webRtcEndpoint, callback) => {                
+                // increase max video receive bandwidth to 1000 kb/s                
                 rtpEndpoint.setMaxVideoRecvBandwidth(1000);
 
                 rtpEndpoint.processOffer(encoderSdpRequest, (err, sdpAnswer) => {
@@ -169,6 +166,7 @@ class KurentoClient{
 
                     console.log(`successfully process sdp from encoder \n\n${sdpAnswer}`);
 
+                    // check connection state with device
                     rtpEndpoint.getConnectionState(function encoderStateChanged(err, state) {
                         if (err) {
                             console.error(err);
@@ -192,7 +190,8 @@ class KurentoClient{
                     }
 
                     console.log('successfullty processed sdp offer from client');                    
-
+                    
+                    // TODO: implement event-emitter interface instead
                     cb(null, sdpAnswer);
 
                     callback(null, pipeline, rtpEndpoint, webRtcEndpoint);
@@ -250,6 +249,7 @@ class KurentoClient{
 
                     let candidate = kurento.getComplexType('IceCandidate')(event.candidate);
                     
+                    // TODO: implement event-emitter interface instead of this OOP violation
                     self.ws.send(JSON.stringify({
                         id: 'iceCandidate',
                         candidate: candidate
