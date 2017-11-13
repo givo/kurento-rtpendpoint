@@ -10,6 +10,14 @@ We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `Qui
 
 [Kurento](4) is deployed on Ubuntu 14.04 virtual machine
 
+## Project Structure
+
+* [/Client](https://github.com/givo/kurento-rtpendpoint/tree/master/client) (Directory which holds the client-side application): 
+  + [client.js](https://github.com/givo/kurento-rtpendpoint/blob/master/client/client.js) uses [RTCPeerConnection](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection) API in order to connect the `WebRtc` stream with [Kurento](4).
+  
+* [/Kurento](https://github.com/givo/kurento-rtpendpoint/tree/master/Kurento) Directory which holds everything that is related to [Kurento](4)):
+  + [KurentoClient](https://github.com/givo/kurento-rtpendpoint/blob/master/Kurento/KurentoClient.js) implements a module for pipeline creation. (OOP improvements are issued)
+
 ## Improtant Notes
 
 * Most use cases for `RtpEndpoint`'s are `h.264` streams, therefore it's recommended to prevent transcoding.
