@@ -12,9 +12,9 @@ We successfuly connected `Kurento` to Maktio using `Direct RTP` and `QuickTime`.
 
 ## Improtant Notes
 
-* In order for this example to work you need to reconfigure `Makito` in runtime (just after receiving the sdp answer) to use the udp port which `kurento` accepts in the sdp answer.
-
 * Your `Ubuntu` machine which runs `Kurento` have to have `openh264` and package from Cisco installed.
+
+* If your rtp source doesn't support sdp negogiation, you will need to manually configure it transmits to the udp port described in kurento sdp answer.
 
 ## Codec Transcoding
 
@@ -35,6 +35,8 @@ sudo dpkg -i openh264-gst-plugins-bad-1.5_1.8.1.1~20160909144557.99.gf836e53.tru
 ```
 
 ## Haivision Makito
+
+* In order for this example to work you need to reconfigure `Makito` in runtime (just after receiving the sdp answer) to use the udp port which `kurento` accepts in the sdp answer.
 
 ![directrtp](https://user-images.githubusercontent.com/11993599/32729751-7cb526d6-c88d-11e7-8eb5-29e1b17cc117.png)
 
