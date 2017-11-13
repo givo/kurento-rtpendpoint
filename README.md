@@ -14,7 +14,7 @@ We successfuly connected [Kurento](4) to Maktio using `Direct RTP` and `QuickTim
 
 * Learn [SDP](7)! (or at least learn the basics)
 
-* Your `Ubuntu` machine which runs [Kurento](4) have to have [openh264](5) and package from Cisco installed.
+* Your `Ubuntu` machine which runs [Kurento](4) have to have [openh264](5) package from Cisco installed in order to prevent transcoding for better quality and performance.
 
 * If your rtp source doesn't support sdp negogiation, you will need to manually configure it transmits to the udp port described in kurento sdp answer.
 
