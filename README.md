@@ -18,10 +18,11 @@ We successfuly connected [Kurento](4) to Maktio using `Direct RTP` and `QuickTim
 
 ## Codec Transcoding
 
-By default [Kurento](4) use VP8 as the [WebRtc](6) codec, that's why Kurento will transcode any `h.264` stream before sinking to a WebRtcEndpoint.
+By default [Kurento](4) use `VP8` as its' [WebRtc](6) codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2).
 
-* In order to disable transcoding to VP8 at Kurento, request a h264 rtp profile in client side by editing the local sdp.
-* You can implement that by removing all `rtpmap` lines which are different then 96 and leave only `a=rtpmap:96 H264/90000` line.
+In order to disable transcoding to VP8 at Kurento, request a h264 rtp profile in client side by editing the local sdp.
+
+You can implement that by removing all `rtpmap` lines which are different then 96 and leave only `a=rtpmap:96 H264/90000` line.
 
 ## 'openh265' offline installation instructions:
 
