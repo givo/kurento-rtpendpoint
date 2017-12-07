@@ -204,7 +204,7 @@ class KurentoClient{
                 
                 console.log(`fifo ${self.iceCandidateFIFO[sessionId].length}`);
 
-                async.retry((iceCallback) => {
+                async.retry(100, (iceCallback) => {
                     if (self.iceCandidateFIFO[sessionId].length) {
                         // pull candidate from queue
                         var candidate = self.iceCandidateFIFO[sessionId].shift();
