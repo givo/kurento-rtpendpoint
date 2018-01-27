@@ -34,9 +34,9 @@ By default [Kurento](4) uses `VP8` codec, that's why [Kurento](4) will transcode
 
 * Install [openh264](5) from Cisco to your `Ubuntu` machine which runs [Kurento](4).
 
-* Request a `h.264` rtp profile in the client side by editing the local sdp by: (generate by calling [RtcPeerConnection.createOffer](8))
+* Request a `h.264` rtp profile in client side by editing the sdp offer: (generate by calling [RtcPeerConnection.createOffer](8))
 
-  + Removing all `rtpmap` lines which are different then `96` and leave only `a=rtpmap:96 H264/90000` line.
+  + Remove all `rtpmap` lines which are different then `96` and leave only `a=rtpmap:96 H264/90000` line.
 
 ## 'openh265' installation instructions:
 
