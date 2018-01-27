@@ -30,7 +30,7 @@ We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `Qui
 
 ## Prevent Transcoding
 
-By default [Kurento](4) uses `VP8` as its' [WebRtc](6) codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2). By preventing transcoding you will improve quality and performance. Here's are the steps to prevent transcoding: 
+By default [Kurento](4) uses `VP8` codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2). By preventing transcoding you will improve quality and performance. Here's are the steps to prevent transcoding: 
 
 * Install [openh264](5) from Cisco to your `Ubuntu` machine which runs [Kurento](4).
 
