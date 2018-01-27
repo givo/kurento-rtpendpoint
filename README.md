@@ -12,11 +12,11 @@ We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `Qui
 
 ## Project Structure
 
-* [/Client](https://github.com/givo/kurento-rtpendpoint/tree/master/client) (Directory which holds the client-side application): 
-  + [client.js](https://github.com/givo/kurento-rtpendpoint/blob/master/client/client.js) - uses [RTCPeerConnection](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection) API in order to connect the `WebRtc` stream with [Kurento](4).
+* [/Client](https://github.com/givo/kurento-rtpendpoint/tree/master/client) - Simple web client application: 
+  + [client.js](https://github.com/givo/kurento-rtpendpoint/blob/master/client/client.js) - uses [RTCPeerConnection](11) and [WebSocket](10) APIs in order to connect the `WebRTC` stream with [Kurento](4).
   
-* [/Kurento](https://github.com/givo/kurento-rtpendpoint/tree/master/Kurento) Directory which holds everything that is related to [Kurento](4)):
-  + [KurentoClient](https://github.com/givo/kurento-rtpendpoint/blob/master/Kurento/KurentoClient.js) - implements a module for pipeline creation. (OOP improvements are issued)
+* [/Kurento](https://github.com/givo/kurento-rtpendpoint/tree/master/Kurento) - Everything that is related to [Kurento](4)):
+  + [KurentoClient](https://github.com/givo/kurento-rtpendpoint/blob/master/Kurento/KurentoClient.js) - handles pipeline creation. (OOP improvements are issued)
 
 * [server.js](https://github.com/givo/kurento-rtpendpoint/blob/master/server.js) - server's entry point, handles signaling and session with clients using `websocket` and `express`.
 
@@ -30,15 +30,13 @@ We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `Qui
 
 ## Prevent Transcoding
 
-By default [Kurento](4) uses `VP8` as its' [WebRtc](6) codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2).
+By default [Kurento](4) uses `VP8` as its' [WebRtc](6) codec, that's why [Kurento](4) will transcode any `h.264` stream before sinking to a [WebRtcEndpoint](2). By preventing transcoding you will improve quality and performance. Here's are the steps to prevent transcoding: 
 
-* Your `Ubuntu` machine which runs [Kurento](4) have to have [openh264](5) package from Cisco installed.
+* Install [openh264](5) from Cisco to your `Ubuntu` machine which runs [Kurento](4).
 
-* Preventing `transcoding` will improve quality and performance.
+* Request a `h.264` rtp profile in the client side by editing the local sdp by: (generate by calling [RtcPeerConnection.createOffer](8))
 
-* In order to disable transcoding to `VP8`, request a `h.264` rtp profile in client side by editing the local sdp. (generate by calling [RtcPeerConnection.createOffer](8) at client-side)
-
-You can implement that by removing all `rtpmap` lines which are different then 96 and leave only `a=rtpmap:96 H264/90000` line.
+  + Removing all `rtpmap` lines which are different then `96` and leave only `a=rtpmap:96 H264/90000` line.
 
 ## 'openh265' installation instructions:
 
@@ -50,17 +48,9 @@ sudo apt-get install openh264-gst-plugins-bad-1.5
 
 ## Haivision Makito
 
-* In order for this example to work you need to reconfigure [Makito](3) in runtime (just after receiving the sdp answer) to use the udp port which [Kurento](4) accepts in the sdp answer.
+* To reconfigure [Makito](3) in runtime (just after receiving the sdp answer), Set [Makito](3)'s destination udp port as described in [Kurento](4)'s sdp answer.
 
 ![directrtp](https://user-images.githubusercontent.com/11993599/32729751-7cb526d6-c88d-11e7-8eb5-29e1b17cc117.png)
-
-## Required Node.js Packages:
-
-* async
-* express
-* express-session
-* ws
-* kurento-client
 
 [1]: https://doc-kurento.readthedocs.io/en/latest/_static/langdoc/jsdoc/kurento-client-js/module-elements.RtpEndpoint.html
 [2]: https://doc-kurento.readthedocs.io/en/latest/_static/langdoc/jsdoc/kurento-client-js/module-elements.WebRtcEndpoint.html
@@ -71,3 +61,6 @@ sudo apt-get install openh264-gst-plugins-bad-1.5
 [7]: https://tools.ietf.org/html/rfc4566
 [8]: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createOffer
 [9]: https://doc-kurento.readthedocs.io/en/latest/_static/langdoc/jsdoc/kurento-client-js/module-core_abstracts.SdpEndpoint.html#processOffer
+[10]: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
+[11]: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection
+
