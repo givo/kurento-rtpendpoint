@@ -22,7 +22,7 @@ We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `Qui
 
 ## Improtant Notes
 
-* Most use cases for `RtpEndpoint`'s are `h.264` streams, therefore it's recommended to prevent transcoding when sinking to WebRtc.
+* Most use cases for using a `RtpEndpoint`'s are for connecting to a `h.264` streams, therefore it's recommended to prevent `VP8` transcoding when sinking to WebRtc.
 
 * If your rtp device doesn't support sdp negogiation, you will need to manually configure it to stream to the udp port described in the returned sdp answer ( returned in [rtpEndpoint.processOffer(function(sdpAnswer){ ... })](9) ).
 
