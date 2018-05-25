@@ -4,9 +4,9 @@
 
 This is a `Node.js` example which creates a [RtpEndpoint](1) to [WebRtcEndpoint](2) pipeline in [Kurento](4) media server. 
 
-In this example a we used [Haivision Makito](3) to capture a monitor and watching the live stream on a simple web page.
+In this example we used [Haivision Makito](3) to capture a monitor and stream to a simple web page.
 
-We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `QuickTime`.
+We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `QuickTime` protocols which are essentially `RTP` protocols.
 
 [Kurento](4) is deployed on Ubuntu 14.04 virtual machine
 
@@ -24,7 +24,7 @@ We successfuly connected [Kurento](4) to [Maktio](3) using `Direct RTP` and `Qui
 
 * Most use cases for using a `RtpEndpoint`'s are for connecting to a `h.264` streams, therefore it's recommended to prevent `VP8` transcoding when sinking to WebRtc.
 
-* If your rtp device doesn't support sdp negogiation, you will need to manually configure it to stream to the udp port described in the returned sdp answer ( returned in [rtpEndpoint.processOffer(function(sdpAnswer){ ... })](9) ).
+* If your rtp device doesn't support sdp negogiation, you need to manually configure the stream to use the udp port described in the returned sdp answer ( returned in [rtpEndpoint.processOffer( (sdpAnswer) => { ... } )](9) ).
 
 * Learn [SDP](7)! (or at least learn the basics)
 
@@ -38,7 +38,7 @@ By default [Kurento](4) uses `VP8` codec, that's why [Kurento](4) will transcode
 
   + Remove all `rtpmap` lines which are different then `96` and leave only `a=rtpmap:96 H264/90000` line.
 
-## 'openh265' installation instructions:
+## 'openh264' installation instructions:
 
  * Download `openh264-gst-plugins-bad-1.5` using:
  
@@ -60,7 +60,7 @@ sudo apt-get install openh264-gst-plugins-bad-1.5
 [6]: https://webrtc.org/
 [7]: https://tools.ietf.org/html/rfc4566
 [8]: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createOffer
-[9]: https://doc-kurento.readthedocs.io/en/latest/_static/langdoc/jsdoc/kurento-client-js/module-core_abstracts.SdpEndpoint.html#processOffer
+[9]: https://doc-kurento.readthedocs.io/en/6.7.1/_static/client-jsdoc/module-core_abstracts.SdpEndpoint.html
 [10]: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
 [11]: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection
 
