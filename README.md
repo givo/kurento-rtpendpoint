@@ -1,6 +1,6 @@
 # RtpEndpoint Example
 
-**I have created a library for simplifing Kurento endpoint initialization, will be uploaded soon**
+**I have created a library for simplifing Kurento endpoints initialization, will be uploaded soon**
 
 ## Introduction
 
