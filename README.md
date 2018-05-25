@@ -1,5 +1,7 @@
 # RtpEndpoint Example
 
+**I have created a library for simplifing Kurento endpoint initialization, will be uploaded soon**
+
 ## Introduction
 
 This is a `Node.js` example which creates a [RtpEndpoint][1] to [WebRtcEndpoint][2] pipeline in [Kurento][4] media server. 
