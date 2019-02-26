@@ -1,6 +1,6 @@
 # RtpEndpoint Example
 
-**I have created a library for simplifing `kurento-client` I recommend you to take a look [here](https://github.com/givo/lib-kurento)**
+**I have created a library for simplifing the use of `kurento-client` I recommend you to take a look [here](https://github.com/givo/lib-kurento)**
 
 ## Introduction
 
