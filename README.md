@@ -14,8 +14,6 @@ We successfuly connected [Kurento][4] to [Maktio][3] using `Direct RTP` and `Qui
 
 ## Project Structure
 
-asdasd
-
 * [/Client](https://github.com/givo/kurento-rtpendpoint/tree/master/client) - Simple web client application: 
   + [client.js](https://github.com/givo/kurento-rtpendpoint/blob/master/client/client.js) - uses [RTCPeerConnection][11] and [WebSocket][10] APIs in order to create a `WebRTC` stream with [Kurento][4].
   
